@@ -555,6 +555,15 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
 
 
 def generate_project(bazel, arguments):
+    rules_module_path = os.path.join(
+        'build-system', 'bazel-rules', 'rules_xcodeproj', 'MODULE.bazel'
+    )
+    if not os.path.isfile(rules_module_path):
+        print(
+            'Missing {}. Please run `git submodule update --init --recursive`.'
+            .format(rules_module_path)
+        )
+        sys.exit(1)
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -628,6 +637,15 @@ def generate_project(bazel, arguments):
 
 
 def build(bazel, arguments):
+    rules_module_path = os.path.join(
+        'build-system', 'bazel-rules', 'rules_xcodeproj', 'MODULE.bazel'
+    )
+    if not os.path.isfile(rules_module_path):
+        print(
+            'Missing {}. Please run `git submodule update --init --recursive`.'
+            .format(rules_module_path)
+        )
+        sys.exit(1)
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
