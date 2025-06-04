@@ -17,6 +17,20 @@ import RemoteBuild
 import GenerateProfiles
 
 
+def check_watchos_runtime():
+    """Ensure that a watchOS runtime is available for the simulator."""
+    try:
+        runtimes = run_executable_with_output('xcrun', ['simctl', 'list', 'runtimes'])
+    except Exception:
+        print('Failed to check available runtimes via xcrun')
+        sys.exit(1)
+
+    if 'watchOS' not in runtimes:
+        print('No watchOS runtimes found. Install one in Xcode Preferences -> Platforms '\
+              'or build with extensions disabled using --disableExtensions.')
+        sys.exit(1)
+
+
 class ResolvedCodesigningData:
     def __init__(self, aps_environment, use_xcode_managed_codesigning):
         self.aps_environment = aps_environment
@@ -210,6 +224,7 @@ class BazelCommandLine:
         return combined_arguments
 
     def invoke_clean(self):
+        check_watchos_runtime()
         combined_arguments = [
             self.build_environment.bazel_path
         ]
@@ -265,6 +280,7 @@ class BazelCommandLine:
         return combined_arguments
 
     def invoke_build(self):
+        check_watchos_runtime()
         combined_arguments = [
             self.build_environment.bazel_path
         ]
@@ -316,6 +332,7 @@ class BazelCommandLine:
         call_executable(combined_arguments)
 
     def invoke_test(self):
+        check_watchos_runtime()
         combined_arguments = [
             self.build_environment.bazel_path
         ]
@@ -356,6 +373,7 @@ class BazelCommandLine:
         call_executable(combined_arguments)
 
     def invoke_query(self, query_args):
+        check_watchos_runtime()
         combined_arguments = [
             self.build_environment.bazel_path
         ]
@@ -394,6 +412,7 @@ class BazelCommandLine:
         call_executable(combined_arguments)
 
     def get_spm_aspect_invocation(self):
+        check_watchos_runtime()
         combined_arguments = [
             self.build_environment.bazel_path
         ]
@@ -555,6 +574,7 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
 
 
 def generate_project(bazel, arguments):
+    check_watchos_runtime()
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -628,6 +648,7 @@ def generate_project(bazel, arguments):
 
 
 def build(bazel, arguments):
+    check_watchos_runtime()
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -693,6 +714,7 @@ def build(bazel, arguments):
 
 
 def test(bazel, arguments):
+    check_watchos_runtime()
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -719,6 +741,7 @@ def test(bazel, arguments):
 
 
 def query(bazel, arguments):
+    check_watchos_runtime()
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -749,6 +772,7 @@ def query(bazel, arguments):
 
 
 def get_spm_aspect_invocation(bazel, arguments):
+    check_watchos_runtime()
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
