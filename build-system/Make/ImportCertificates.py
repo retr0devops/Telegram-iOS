@@ -12,9 +12,24 @@ def import_certificates(certificatesPath):
     keychain_name = 'temp.keychain'
     keychain_password = 'secret'
 
-    existing_keychains = run_executable_with_output('security', arguments=['list-keychains'], check_result=True)
-    if keychain_name in existing_keychains:
-        run_executable_with_output('security', arguments=['delete-keychain', keychain_name], check_result=True)
+    existing_keychains_output = run_executable_with_output('security', arguments=['list-keychains'], check_result=True)
+    def parse_keychains(output):
+        paths = []
+        for line in output.splitlines():
+            line = line.strip().strip('"')
+            if line:
+                paths.append(line)
+        return paths
+
+    existing_keychains = parse_keychains(existing_keychains_output)
+    temp_keychain_path = None
+    for path in existing_keychains:
+        if keychain_name in os.path.basename(path):
+            temp_keychain_path = path
+            break
+
+    if temp_keychain_path is not None:
+        run_executable_with_output('security', arguments=['delete-keychain', temp_keychain_path], check_result=True)
 
     run_executable_with_output('security', arguments=[
         'create-keychain',
@@ -23,8 +38,8 @@ def import_certificates(certificatesPath):
         keychain_name
     ], check_result=True)
 
-    existing_keychains = run_executable_with_output('security', arguments=['list-keychains', '-d', 'user'])
-    existing_keychains = existing_keychains.replace('"', '').split()
+    existing_keychains_output = run_executable_with_output('security', arguments=['list-keychains', '-d', 'user'])
+    existing_keychains = parse_keychains(existing_keychains_output)
 
     run_executable_with_output('security', arguments=[
         'list-keychains',
