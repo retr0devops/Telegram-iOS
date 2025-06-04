@@ -55,7 +55,7 @@ class BuildConfiguration:
         string += 'telegram_aps_environment = "{}"\n'.format(aps_environment)
         string += 'telegram_enable_siri = {}\n'.format(self.enable_siri)
         string += 'telegram_enable_icloud = {}\n'.format(self.enable_icloud)
-        string += 'telegram_enable_watch = True\n'
+        string += 'telegram_enable_watch = False\n'
 
         if os.path.exists(path):
             os.remove(path)
