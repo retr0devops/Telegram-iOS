@@ -32,6 +32,14 @@ There are several things we require from **all developers** for the moment.
 git clone --recursive -j8 https://github.com/Swiftgram/Telegram-iOS.git
 ```
 
+If you cloned the repository without `--recursive`, fetch the submodules manually:
+
+```
+git submodule update --init --recursive
+```
+
+Missing submodules lead to errors such as `No MODULE.bazel… rules_xcodeproj`.
+
 ## Setup Xcode
 
 Install Xcode (directly from https://developer.apple.com/download/applications or using the App Store).
