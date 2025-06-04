@@ -85,6 +85,15 @@ python3 build-system/Make/Make.py \
     --configuration=release_arm64
 ```
 
+Make sure the watchOS simulator runtimes are installed. Otherwise you may see
+
+```
+No available simulator runtimes for platform watchsimulator
+```
+
+If watchOS support isn't required, disable the watch targets in your
+configuration.
+
 # FAQ
 
 ## Xcode is stuck at "build-request.json not updated yet"
