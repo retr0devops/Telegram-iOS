@@ -9,8 +9,7 @@
 	"appstore_id": "0",
 	"app_specific_url_scheme": "tg",
 	"premium_iap_product_id": "",
-        "enable_siri": false,
-        "enable_icloud": false,
-        "enable_watch": false,
-        "sg_config": ""
+	"enable_siri": false,
+	"enable_icloud": false,
+	"sg_config": ""
 }
