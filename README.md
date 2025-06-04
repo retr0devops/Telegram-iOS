@@ -60,7 +60,7 @@ python3 build-system/Make/Make.py \
 
 ## Xcode
 
-1. Copy and edit `build-system/appstore-configuration.json`.
+1. Copy and edit `build-system/appstore-configuration.json`. Ensure the JSON includes an `sg_config` key (set it to an empty string if you do not have custom Swiftgram configuration).
 2. Copy `build-system/fake-codesigning`. Create and download provisioning profiles, using the `profiles` folder as a reference for the entitlements.
 3. Generate an Xcode project:
 ```

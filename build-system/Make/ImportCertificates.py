@@ -14,7 +14,7 @@ def import_certificates(certificatesPath):
 
     existing_keychains = run_executable_with_output('security', arguments=['list-keychains'], check_result=True)
     if keychain_name in existing_keychains:
-        run_executable_with_output('security', arguments=['delete-keychain'], check_result=True)
+        run_executable_with_output('security', arguments=['delete-keychain', keychain_name], check_result=True)
 
     run_executable_with_output('security', arguments=[
         'create-keychain',
@@ -24,7 +24,7 @@ def import_certificates(certificatesPath):
     ], check_result=True)
 
     existing_keychains = run_executable_with_output('security', arguments=['list-keychains', '-d', 'user'])
-    existing_keychains.replace('"', '')
+    existing_keychains = existing_keychains.replace('"', '').split()
 
     run_executable_with_output('security', arguments=[
         'list-keychains',
@@ -32,7 +32,7 @@ def import_certificates(certificatesPath):
         'user',
         '-s',
         keychain_name,
-        existing_keychains
+        *existing_keychains
     ], check_result=True)
 
     run_executable_with_output('security', arguments=['set-keychain-settings', keychain_name])
