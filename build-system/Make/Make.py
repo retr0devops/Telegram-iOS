@@ -155,7 +155,8 @@ class BazelCommandLine:
     def set_disable_extensions(self):
         self.disable_extensions = True
 
-    def set_configuration(self, configuration):
+    def set_configuration(self, configuration, enable_watch=True):
+        watch_args = ['--watchos_cpus=armv7k,arm64_32'] if enable_watch else []
         if configuration == 'debug_arm64':
             self.configuration_args = [
                 # bazel debug build configuration
@@ -163,10 +164,7 @@ class BazelCommandLine:
 
                 # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
                 '--ios_multi_cpus=arm64',
-
-                # Always build universal Watch binaries.
-                '--watchos_cpus=armv7k,arm64_32'
-            ] + self.common_debug_args
+            ] + watch_args + self.common_debug_args
         elif configuration == 'debug_sim_arm64':
             self.configuration_args = [
                 # bazel debug build configuration
@@ -174,10 +172,7 @@ class BazelCommandLine:
 
                 # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
                 '--ios_multi_cpus=sim_arm64',
-
-                # Always build universal Watch binaries.
-                '--watchos_cpus=armv7k,arm64_32'
-            ] + self.common_debug_args
+            ] + watch_args + self.common_debug_args
         elif configuration == 'release_sim_arm64':
             self.configuration_args = [
                 # bazel optimized build configuration
@@ -185,10 +180,7 @@ class BazelCommandLine:
 
                 # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
                 '--ios_multi_cpus=sim_arm64',
-
-                # Always build universal Watch binaries.
-                '--watchos_cpus=armv7k,arm64_32'
-            ] + self.common_debug_args
+            ] + watch_args + self.common_debug_args
         elif configuration == 'release_arm64':
             self.configuration_args = [
                 # bazel optimized build configuration
@@ -196,10 +188,7 @@ class BazelCommandLine:
 
                 # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
                 '--ios_multi_cpus=arm64',
-
-                # Always build universal Watch binaries.
-                '--watchos_cpus=armv7k,arm64_32',
-
+            ] + watch_args + [
                 # Generate DSYM files when building.
                 '--apple_generate_dsym',
 
@@ -616,6 +605,8 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
     if bazel_command_line is not None:
         bazel_command_line.set_configuration_path(configuration_repository_path)
 
+    return build_configuration
+
 
 def generate_project(bazel, arguments):
     rules_module_path = os.path.join(
@@ -730,14 +721,14 @@ def build(bazel, arguments):
     if arguments.bazelArguments is not None:
         bazel_command_line.add_additional_args(arguments.bazelArguments)
 
-    resolve_configuration(
+    build_configuration = resolve_configuration(
         base_path=os.getcwd(),
         bazel_command_line=bazel_command_line,
         arguments=arguments,
         additional_codesigning_output_path=None
     )
 
-    bazel_command_line.set_configuration(arguments.configuration)
+    bazel_command_line.set_configuration(arguments.configuration, enable_watch=build_configuration.enable_watch)
     bazel_command_line.set_build_number(arguments.buildNumber)
     bazel_command_line.set_custom_target(arguments.target)
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
@@ -798,14 +789,14 @@ def test(bazel, arguments):
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
 
-    resolve_configuration(
+    build_configuration = resolve_configuration(
         base_path=os.getcwd(),
         bazel_command_line=bazel_command_line,
         arguments=arguments,
         additional_codesigning_output_path=None
     )
 
-    bazel_command_line.set_configuration('debug_sim_arm64')
+    bazel_command_line.set_configuration('debug_sim_arm64', enable_watch=build_configuration.enable_watch)
     bazel_command_line.set_build_number('10000')
 
     bazel_command_line.invoke_test()
@@ -854,14 +845,14 @@ def get_spm_aspect_invocation(bazel, arguments):
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
 
-    resolve_configuration(
+    build_configuration = resolve_configuration(
         base_path=os.getcwd(),
         bazel_command_line=bazel_command_line,
         arguments=arguments,
         additional_codesigning_output_path=None
     )
 
-    bazel_command_line.set_configuration(arguments.configuration)
+    bazel_command_line.set_configuration(arguments.configuration, enable_watch=build_configuration.enable_watch)
     bazel_command_line.set_build_number(arguments.buildNumber)
     bazel_command_line.set_custom_target(arguments.target)
     bazel_command_line.set_continue_on_error(False)
