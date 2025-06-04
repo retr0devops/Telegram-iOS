@@ -9,7 +9,8 @@ import subprocess
 import shutil
 import glob
 
-from BuildEnvironment import resolve_executable, call_executable, run_executable_with_output, BuildEnvironmentVersions, BuildEnvironment
+from BuildEnvironment import resolve_executable, call_executable, run_executable_with_output, run_executable_with_status, BuildEnvironmentVersions, BuildEnvironment
+import plistlib
 from ProjectGeneration import generate
 from BazelLocation import locate_bazel
 from BuildConfiguration import CodesigningSource, GitCodesigningSource, DirectoryCodesigningSource, XcodeManagedCodesigningSource, BuildConfiguration, build_configuration_from_json
@@ -508,6 +509,49 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
     )
 
 
+def verify_configuration_certificates(provisioning_path):
+    existing_certs = run_executable_with_output(
+        'security',
+        arguments=['find-certificate', '-a', '-Z'],
+        use_clean_env=False,
+        check_result=True
+    ).upper().replace(':', '')
+
+    for file_name in os.listdir(provisioning_path):
+        if not file_name.endswith('.mobileprovision'):
+            continue
+
+        file_path = provisioning_path + '/' + file_name
+        profile_data = run_executable_with_output(
+            'openssl',
+            arguments=['smime', '-inform', 'der', '-verify', '-noverify', '-in', file_path],
+            decode=False,
+            stderr_to_stdout=False,
+            check_result=True
+        )
+
+        profile_dict = plistlib.loads(profile_data)
+
+        for certificate_data in profile_dict.get('DeveloperCertificates', []):
+            with tempfile.NamedTemporaryFile(delete=False) as cert_file:
+                cert_file.write(certificate_data)
+            fingerprint_output = run_executable_with_output(
+                'openssl',
+                arguments=['x509', '-inform', 'der', '-noout', '-fingerprint', '-sha1', '-in', cert_file.name],
+                check_result=True
+            ).strip()
+            os.unlink(cert_file.name)
+
+            if '=' in fingerprint_output:
+                fingerprint = fingerprint_output.split('=')[1]
+            else:
+                fingerprint = fingerprint_output
+            fingerprint = fingerprint.replace(':', '').upper()
+
+            if fingerprint not in existing_certs:
+                print('Missing certificate with fingerprint {} for provisioning profile {}'.format(fingerprint, file_name))
+                sys.exit(1)
+
 def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, arguments, additional_codesigning_output_path):
     configuration_repository_path = '{}/build-input/configuration-repository'.format(base_path)
     os.makedirs(configuration_repository_path, exist_ok=True)
@@ -532,6 +576,7 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
         provisioning_profiles_path=provisioning_path,
         additional_codesigning_output_path=additional_codesigning_output_path
     )
+    verify_configuration_certificates(provisioning_path)
     if codesigning_data.aps_environment is None:
         print('Could not find a valid aps-environment entitlement in the provided provisioning profiles')
         sys.exit(1)
