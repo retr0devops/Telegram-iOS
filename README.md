@@ -137,6 +137,20 @@ python3 build-system/Make/Make.py \
     --disableProvisioningProfiles
 ```
 
+## Build without extensions
+
+Skip compiling extensions by passing `--disableExtensions`:
+```
+python3 build-system/Make/Make.py \
+    --cacheDir="$HOME/telegram-bazel-cache" \
+    build \
+    --configurationPath=path-to-configuration.json \
+    --codesigningInformationPath=path-to-provisioning-data \
+    --buildNumber=100001 \
+    --configuration=release_arm64 \
+    --disableExtensions
+```
+
 ## Versions
 
 Each release is built using a specific Xcode version (see `versions.json`). The helper script checks the versions of the installed software and reports an error if they don't match the ones specified in `versions.json`. It is possible to bypass these checks:

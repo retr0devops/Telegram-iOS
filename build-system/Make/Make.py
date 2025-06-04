@@ -46,6 +46,7 @@ class BazelCommandLine:
         self.show_actions = False
         self.enable_sandbox = False
         self.disable_provisioning_profiles = False
+        self.disable_extensions = False
 
         self.common_args = [
             # https://docs.bazel.build/versions/master/command-line-reference.html
@@ -121,7 +122,11 @@ class BazelCommandLine:
         self.cache_dir = path
 
     def add_additional_args(self, additional_args):
-        self.additional_args = additional_args
+        if additional_args is None:
+            return
+        if self.additional_args is None:
+            self.additional_args = []
+        self.additional_args += shlex.split(additional_args)
 
     def set_build_number(self, build_number):
         self.build_number = build_number
@@ -146,6 +151,9 @@ class BazelCommandLine:
 
     def set_disable_provisioning_profiles(self):
         self.disable_provisioning_profiles = True
+
+    def set_disable_extensions(self):
+        self.disable_extensions = True
 
     def set_configuration(self, configuration):
         if configuration == 'debug_arm64':
@@ -208,6 +216,8 @@ class BazelCommandLine:
         combined_arguments = []
         if self.bazel_user_root is not None:
             combined_arguments += ['--output_user_root={}'.format(self.bazel_user_root)]
+        if self.additional_args is not None:
+            combined_arguments += self.additional_args
         return combined_arguments
 
     def invoke_clean(self):
@@ -263,6 +273,9 @@ class BazelCommandLine:
                 '--features=swift.split_derived_files_generation',
             ]
 
+        if self.additional_args is not None:
+            combined_arguments += self.additional_args
+
         return combined_arguments
 
     def invoke_build(self):
@@ -287,6 +300,8 @@ class BazelCommandLine:
 
         if self.disable_provisioning_profiles:
             combined_arguments += ['--//Telegram:disableProvisioningProfiles']
+        if self.disable_extensions:
+            combined_arguments += ['--//Telegram:disableExtensions']
 
         if self.configuration_path is None:
             raise Exception('configuration_path is not defined')
@@ -455,6 +470,9 @@ def clean(bazel, arguments):
         bazel_user_root=arguments.bazelUserRoot
     )
 
+    if arguments.bazelArguments is not None:
+        bazel_command_line.add_additional_args(arguments.bazelArguments)
+
     bazel_command_line.invoke_clean()
 
 
@@ -621,6 +639,12 @@ def generate_project(bazel, arguments):
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
 
+    if arguments.bazelArguments is not None:
+        bazel_command_line.add_additional_args(arguments.bazelArguments)
+
+    if arguments.bazelArguments is not None:
+        bazel_command_line.add_additional_args(arguments.bazelArguments)
+
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
 
     resolve_configuration(
@@ -703,6 +727,9 @@ def build(bazel, arguments):
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
 
+    if arguments.bazelArguments is not None:
+        bazel_command_line.add_additional_args(arguments.bazelArguments)
+
     resolve_configuration(
         base_path=os.getcwd(),
         bazel_command_line=bazel_command_line,
@@ -716,6 +743,9 @@ def build(bazel, arguments):
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
     bazel_command_line.set_show_actions(arguments.showActions)
     bazel_command_line.set_enable_sandbox(arguments.sandbox)
+
+    if arguments.disableExtensions:
+        bazel_command_line.set_disable_extensions()
 
     bazel_command_line.set_split_swiftmodules(arguments.enableParallelSwiftmoduleGeneration)
 
@@ -1096,6 +1126,12 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Enable sandbox.',
+    )
+    buildParser.add_argument(
+        '--disableExtensions',
+        action='store_true',
+        default=False,
+        help='Do not build app extensions.',
     )
     buildParser.add_argument(
         '--outputBuildArtifactsPath',
