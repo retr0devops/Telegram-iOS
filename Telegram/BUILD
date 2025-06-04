@@ -68,7 +68,7 @@ config_setting(
 
 bool_flag(
     name = "disableExtensions",
-    build_setting_default = True,
+    build_setting_default = False,
     visibility = ["//visibility:public"],
 )
 

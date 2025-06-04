@@ -32,14 +32,6 @@ There are several things we require from **all developers** for the moment.
 git clone --recursive -j8 https://github.com/Swiftgram/Telegram-iOS.git
 ```
 
-If you cloned the repository without `--recursive`, fetch the submodules manually:
-
-```
-git submodule update --init --recursive
-```
-
-Missing submodules lead to errors such as `No MODULE.bazel… rules_xcodeproj`.
-
 ## Setup Xcode
 
 Install Xcode (directly from https://developer.apple.com/download/applications or using the App Store).
@@ -68,8 +60,8 @@ python3 build-system/Make/Make.py \
 
 ## Xcode
 
-1. Copy and edit `build-system/appstore-configuration.json`. Ensure the JSON includes an `sg_config` key (set it to an empty string if you do not have custom Swiftgram configuration).
-2. Copy `build-system/fake-codesigning`. Create and download provisioning profiles, using the `profiles` folder as a reference for the entitlements. The sample profiles reference an Apple certificate that is not included in this repository. Create your own profiles using the certificates in `build-system/fake-codesigning/certs`; otherwise the build fails with an "Unable to find an identity" error.
+1. Copy and edit `build-system/appstore-configuration.json`.
+2. Copy `build-system/fake-codesigning`. Create and download provisioning profiles, using the `profiles` folder as a reference for the entitlements.
 3. Generate an Xcode project:
 ```
 python3 build-system/Make/Make.py \
@@ -92,17 +84,6 @@ python3 build-system/Make/Make.py \
     --buildNumber=100001 \
     --configuration=release_arm64
 ```
-
-watchOS build targets are disabled by default. Only the iOS application
-without extensions is compiled. If you need watch support, ensure the
-watchOS simulator runtimes are installed, otherwise you may see
-
-```
-No available simulator runtimes for platform watchsimulator
-```
-
-Set `telegram_enable_watch` to `True` and pass `--//Telegram:disableExtensions=False`
-when generating the project to enable watchOS targets.
 
 # FAQ
 
@@ -137,20 +118,6 @@ python3 build-system/Make/Make.py \
     --configurationPath=path-to-configuration.json \
     --codesigningInformationPath=path-to-provisioning-data \
     --disableProvisioningProfiles
-```
-
-## Build without extensions
-
-Skip compiling extensions by passing `--disableExtensions`:
-```
-python3 build-system/Make/Make.py \
-    --cacheDir="$HOME/telegram-bazel-cache" \
-    build \
-    --configurationPath=path-to-configuration.json \
-    --codesigningInformationPath=path-to-provisioning-data \
-    --buildNumber=100001 \
-    --configuration=release_arm64 \
-    --disableExtensions
 ```
 
 ## Versions

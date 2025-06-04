@@ -9,8 +9,7 @@ import subprocess
 import shutil
 import glob
 
-from BuildEnvironment import resolve_executable, call_executable, run_executable_with_output, run_executable_with_status, BuildEnvironmentVersions, BuildEnvironment
-import plistlib
+from BuildEnvironment import resolve_executable, call_executable, run_executable_with_output, BuildEnvironmentVersions, BuildEnvironment
 from ProjectGeneration import generate
 from BazelLocation import locate_bazel
 from BuildConfiguration import CodesigningSource, GitCodesigningSource, DirectoryCodesigningSource, XcodeManagedCodesigningSource, BuildConfiguration, build_configuration_from_json
@@ -46,7 +45,6 @@ class BazelCommandLine:
         self.show_actions = False
         self.enable_sandbox = False
         self.disable_provisioning_profiles = False
-        self.disable_extensions = False
 
         self.common_args = [
             # https://docs.bazel.build/versions/master/command-line-reference.html
@@ -122,11 +120,7 @@ class BazelCommandLine:
         self.cache_dir = path
 
     def add_additional_args(self, additional_args):
-        if additional_args is None:
-            return
-        if self.additional_args is None:
-            self.additional_args = []
-        self.additional_args += shlex.split(additional_args)
+        self.additional_args = additional_args
 
     def set_build_number(self, build_number):
         self.build_number = build_number
@@ -151,9 +145,6 @@ class BazelCommandLine:
 
     def set_disable_provisioning_profiles(self):
         self.disable_provisioning_profiles = True
-
-    def set_disable_extensions(self):
-        self.disable_extensions = True
 
     def set_configuration(self, configuration):
         if configuration == 'debug_arm64':
@@ -216,8 +207,6 @@ class BazelCommandLine:
         combined_arguments = []
         if self.bazel_user_root is not None:
             combined_arguments += ['--output_user_root={}'.format(self.bazel_user_root)]
-        if self.additional_args is not None:
-            combined_arguments += self.additional_args
         return combined_arguments
 
     def invoke_clean(self):
@@ -273,9 +262,6 @@ class BazelCommandLine:
                 '--features=swift.split_derived_files_generation',
             ]
 
-        if self.additional_args is not None:
-            combined_arguments += self.additional_args
-
         return combined_arguments
 
     def invoke_build(self):
@@ -300,8 +286,6 @@ class BazelCommandLine:
 
         if self.disable_provisioning_profiles:
             combined_arguments += ['--//Telegram:disableProvisioningProfiles']
-        if self.disable_extensions:
-            combined_arguments += ['--//Telegram:disableExtensions']
 
         if self.configuration_path is None:
             raise Exception('configuration_path is not defined')
@@ -470,9 +454,6 @@ def clean(bazel, arguments):
         bazel_user_root=arguments.bazelUserRoot
     )
 
-    if arguments.bazelArguments is not None:
-        bazel_command_line.add_additional_args(arguments.bazelArguments)
-
     bazel_command_line.invoke_clean()
 
 
@@ -527,49 +508,6 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
     )
 
 
-def verify_configuration_certificates(provisioning_path):
-    existing_certs = run_executable_with_output(
-        'security',
-        arguments=['find-certificate', '-a', '-Z'],
-        use_clean_env=False,
-        check_result=True
-    ).upper().replace(':', '')
-
-    for file_name in os.listdir(provisioning_path):
-        if not file_name.endswith('.mobileprovision'):
-            continue
-
-        file_path = provisioning_path + '/' + file_name
-        profile_data = run_executable_with_output(
-            'openssl',
-            arguments=['smime', '-inform', 'der', '-verify', '-noverify', '-in', file_path],
-            decode=False,
-            stderr_to_stdout=False,
-            check_result=True
-        )
-
-        profile_dict = plistlib.loads(profile_data)
-
-        for certificate_data in profile_dict.get('DeveloperCertificates', []):
-            with tempfile.NamedTemporaryFile(delete=False) as cert_file:
-                cert_file.write(certificate_data)
-            fingerprint_output = run_executable_with_output(
-                'openssl',
-                arguments=['x509', '-inform', 'der', '-noout', '-fingerprint', '-sha1', '-in', cert_file.name],
-                check_result=True
-            ).strip()
-            os.unlink(cert_file.name)
-
-            if '=' in fingerprint_output:
-                fingerprint = fingerprint_output.split('=')[1]
-            else:
-                fingerprint = fingerprint_output
-            fingerprint = fingerprint.replace(':', '').upper()
-
-            if fingerprint not in existing_certs:
-                print('Missing certificate with fingerprint {} for provisioning profile {}'.format(fingerprint, file_name))
-                sys.exit(1)
-
 def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, arguments, additional_codesigning_output_path):
     configuration_repository_path = '{}/build-input/configuration-repository'.format(base_path)
     os.makedirs(configuration_repository_path, exist_ok=True)
@@ -594,7 +532,6 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
         provisioning_profiles_path=provisioning_path,
         additional_codesigning_output_path=additional_codesigning_output_path
     )
-    verify_configuration_certificates(provisioning_path)
     if codesigning_data.aps_environment is None:
         print('Could not find a valid aps-environment entitlement in the provided provisioning profiles')
         sys.exit(1)
@@ -618,15 +555,6 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
 
 
 def generate_project(bazel, arguments):
-    rules_module_path = os.path.join(
-        'build-system', 'bazel-rules', 'rules_xcodeproj', 'MODULE.bazel'
-    )
-    if not os.path.isfile(rules_module_path):
-        print(
-            'Missing {}. Please run `git submodule update --init --recursive`.'
-            .format(rules_module_path)
-        )
-        sys.exit(1)
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -638,12 +566,6 @@ def generate_project(bazel, arguments):
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
-
-    if arguments.bazelArguments is not None:
-        bazel_command_line.add_additional_args(arguments.bazelArguments)
-
-    if arguments.bazelArguments is not None:
-        bazel_command_line.add_additional_args(arguments.bazelArguments)
 
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
 
@@ -706,15 +628,6 @@ def generate_project(bazel, arguments):
 
 
 def build(bazel, arguments):
-    rules_module_path = os.path.join(
-        'build-system', 'bazel-rules', 'rules_xcodeproj', 'MODULE.bazel'
-    )
-    if not os.path.isfile(rules_module_path):
-        print(
-            'Missing {}. Please run `git submodule update --init --recursive`.'
-            .format(rules_module_path)
-        )
-        sys.exit(1)
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -726,9 +639,6 @@ def build(bazel, arguments):
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
-
-    if arguments.bazelArguments is not None:
-        bazel_command_line.add_additional_args(arguments.bazelArguments)
 
     resolve_configuration(
         base_path=os.getcwd(),
@@ -743,9 +653,6 @@ def build(bazel, arguments):
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
     bazel_command_line.set_show_actions(arguments.showActions)
     bazel_command_line.set_enable_sandbox(arguments.sandbox)
-
-    if arguments.disableExtensions:
-        bazel_command_line.set_disable_extensions()
 
     bazel_command_line.set_split_swiftmodules(arguments.enableParallelSwiftmoduleGeneration)
 
@@ -1126,12 +1033,6 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Enable sandbox.',
-    )
-    buildParser.add_argument(
-        '--disableExtensions',
-        action='store_true',
-        default=False,
-        help='Do not build app extensions.',
     )
     buildParser.add_argument(
         '--outputBuildArtifactsPath',
