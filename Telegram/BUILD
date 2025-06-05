@@ -2069,8 +2069,7 @@ ios_application(
             # ":SGActionRequestHandler", # UX sucks https://t.me/swiftgramchat/7335
             ":ShareExtension",
             ":NotificationContentExtension",
-            ":NotificationServiceExtension" + notificationServiceExtensionVersion,
-            ":BroadcastUploadExtension",
+            ":NotificationServiceExtension" + notificationServiceExtensionVersion
         ],
     }),
     watch_application = select({
