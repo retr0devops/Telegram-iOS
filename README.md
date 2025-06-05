@@ -82,8 +82,19 @@ python3 build-system/Make/Make.py \
     --configurationPath=...see previous section... \
     --codesigningInformationPath=...see previous section... \
     --buildNumber=100001 \
-    --configuration=release_arm64
+  --configuration=release_arm64
 ```
+
+## Docker Build
+
+You can build an unsigned IPA using Docker on macOS:
+
+```bash
+docker build -t swiftgram .
+docker run --rm -v $(pwd)/build:/telegram/build swiftgram
+```
+
+The resulting IPA will be available at `build/artifacts/Swiftgram.ipa`.
 
 # FAQ
 
