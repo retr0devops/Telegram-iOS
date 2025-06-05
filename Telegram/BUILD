@@ -2067,9 +2067,9 @@ ios_application(
         ":disableExtensionsSetting": [],
         "//conditions:default": [
             # ":SGActionRequestHandler", # UX sucks https://t.me/swiftgramchat/7335
-            ":ShareExtension",
-            ":NotificationContentExtension",
-            ":NotificationServiceExtension" + notificationServiceExtensionVersion
+            # ":ShareExtension",
+            # ":NotificationContentExtension",
+            # ":NotificationServiceExtension" + notificationServiceExtensionVersion
         ],
     }),
     watch_application = select({
